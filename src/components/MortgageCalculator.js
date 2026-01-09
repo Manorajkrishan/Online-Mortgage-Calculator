@@ -15,46 +15,203 @@ const MortgageCalculator = () => {
 
   const [errors, setErrors] = useState({});
   const [results, setResults] = useState(null);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [hasLoadedSavedData, setHasLoadedSavedData] = useState(false);
 
-  // Auto-save to localStorage
+  // Load saved data on mount
   useEffect(() => {
     const savedData = localStorage.getItem('mortgageCalculatorData');
+    const savedStep = localStorage.getItem('mortgageCalculatorStep');
+    const savedTimestamp = localStorage.getItem('mortgageCalculatorTimestamp');
+    
+    if (savedData && !hasLoadedSavedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        // Check if saved data is recent (within 7 days)
+        const isRecent = savedTimestamp && (Date.now() - parseInt(savedTimestamp)) < 7 * 24 * 60 * 60 * 1000;
+        
+        if (isRecent && Object.values(parsed).some(val => val !== '' && val !== null)) {
+          setShowResumePrompt(true);
+        } else {
+          // Clear old data
+          localStorage.removeItem('mortgageCalculatorData');
+          localStorage.removeItem('mortgageCalculatorStep');
+          localStorage.removeItem('mortgageCalculatorTimestamp');
+        }
+      } catch (e) {
+        console.error('Error loading saved data:', e);
+        localStorage.removeItem('mortgageCalculatorData');
+      }
+      setHasLoadedSavedData(true);
+    }
+  }, [hasLoadedSavedData]);
+
+  // Auto-save to localStorage (debounced)
+  useEffect(() => {
+    if (hasLoadedSavedData) {
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('mortgageCalculatorData', JSON.stringify(formData));
+        localStorage.setItem('mortgageCalculatorStep', currentStep.toString());
+        localStorage.setItem('mortgageCalculatorTimestamp', Date.now().toString());
+      }, 500); // Debounce by 500ms
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [formData, currentStep, hasLoadedSavedData]);
+
+  // Resume saved calculation
+  const handleResume = () => {
+    const savedData = localStorage.getItem('mortgageCalculatorData');
+    const savedStep = localStorage.getItem('mortgageCalculatorStep');
+    
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
         setFormData(parsed);
+        if (savedStep) {
+          setCurrentStep(parseInt(savedStep));
+        }
       } catch (e) {
-        console.error('Error loading saved data:', e);
+        console.error('Error resuming saved data:', e);
       }
     }
-  }, []);
+    setShowResumePrompt(false);
+  };
 
-  useEffect(() => {
-    localStorage.setItem('mortgageCalculatorData', JSON.stringify(formData));
-  }, [formData]);
+  // Start fresh
+  const handleStartFresh = () => {
+    localStorage.removeItem('mortgageCalculatorData');
+    localStorage.removeItem('mortgageCalculatorStep');
+    localStorage.removeItem('mortgageCalculatorTimestamp');
+    setShowResumePrompt(false);
+    setFormData({
+      propertyValue: '',
+      deposit: '',
+      interestRate: '',
+      loanTerm: '25',
+      mortgageType: 'repayment'
+    });
+    setCurrentStep(1);
+    setErrors({});
+  };
 
-  // Validate current step
+  // Validate individual field (for inline validation)
+  const validateField = (name, value) => {
+    const newErrors = { ...errors };
+    
+    switch (name) {
+      case 'propertyValue':
+        if (!value || value.trim() === '') {
+          newErrors.propertyValue = 'Property value is required';
+        } else if (isNaN(value) || parseFloat(value) <= 0) {
+          newErrors.propertyValue = 'Property value must be a positive number';
+        } else if (parseFloat(value) < 10000) {
+          newErrors.propertyValue = 'Property value must be at least £10,000';
+        } else if (parseFloat(value) > 10000000) {
+          newErrors.propertyValue = 'Property value cannot exceed £10,000,000';
+        } else {
+          delete newErrors.propertyValue;
+        }
+        break;
+        
+      case 'deposit':
+        if (!value || value.trim() === '') {
+          newErrors.deposit = 'Deposit amount is required';
+        } else if (isNaN(value) || parseFloat(value) <= 0) {
+          newErrors.deposit = 'Deposit must be a positive number';
+        } else if (formData.propertyValue && parseFloat(value) >= parseFloat(formData.propertyValue)) {
+          newErrors.deposit = 'Deposit must be less than property value';
+        } else if (formData.propertyValue && parseFloat(value) < parseFloat(formData.propertyValue) * 0.05) {
+          newErrors.deposit = 'Deposit is typically at least 5% of property value';
+        } else {
+          delete newErrors.deposit;
+        }
+        break;
+        
+      case 'interestRate':
+        if (!value || value.trim() === '') {
+          newErrors.interestRate = 'Interest rate is required';
+        } else if (isNaN(value) || parseFloat(value) <= 0) {
+          newErrors.interestRate = 'Interest rate must be a positive number';
+        } else if (parseFloat(value) > 20) {
+          newErrors.interestRate = 'Interest rate cannot exceed 20%';
+        } else if (parseFloat(value) < 0.1) {
+          newErrors.interestRate = 'Interest rate must be at least 0.1%';
+        } else {
+          delete newErrors.interestRate;
+        }
+        break;
+        
+      case 'loanTerm':
+        if (!value || value.trim() === '') {
+          newErrors.loanTerm = 'Loan term is required';
+        } else if (isNaN(value) || parseFloat(value) <= 0) {
+          newErrors.loanTerm = 'Loan term must be a positive number';
+        } else if (parseFloat(value) < 1) {
+          newErrors.loanTerm = 'Loan term must be at least 1 year';
+        } else if (parseFloat(value) > 50) {
+          newErrors.loanTerm = 'Loan term cannot exceed 50 years';
+        } else {
+          delete newErrors.loanTerm;
+        }
+        break;
+        
+      default:
+        break;
+    }
+    
+    setErrors(newErrors);
+  };
+
+  // Validate current step (called when clicking Next/Calculate)
   const validateStep = (step) => {
     const newErrors = {};
     
     if (step === 1) {
-      if (!formData.propertyValue || formData.propertyValue <= 0) {
-        newErrors.propertyValue = 'Please enter a valid property value';
+      // Validate property value
+      if (!formData.propertyValue || formData.propertyValue.trim() === '') {
+        newErrors.propertyValue = 'Property value is required';
+      } else if (isNaN(formData.propertyValue) || parseFloat(formData.propertyValue) <= 0) {
+        newErrors.propertyValue = 'Property value must be a positive number';
+      } else if (parseFloat(formData.propertyValue) < 10000) {
+        newErrors.propertyValue = 'Property value must be at least £10,000';
+      } else if (parseFloat(formData.propertyValue) > 10000000) {
+        newErrors.propertyValue = 'Property value cannot exceed £10,000,000';
       }
-      if (!formData.deposit || formData.deposit <= 0) {
-        newErrors.deposit = 'Please enter a valid deposit amount';
-      }
-      if (parseFloat(formData.deposit) >= parseFloat(formData.propertyValue)) {
+      
+      // Validate deposit
+      if (!formData.deposit || formData.deposit.trim() === '') {
+        newErrors.deposit = 'Deposit amount is required';
+      } else if (isNaN(formData.deposit) || parseFloat(formData.deposit) <= 0) {
+        newErrors.deposit = 'Deposit must be a positive number';
+      } else if (formData.propertyValue && parseFloat(formData.deposit) >= parseFloat(formData.propertyValue)) {
         newErrors.deposit = 'Deposit must be less than property value';
+      } else if (formData.propertyValue && parseFloat(formData.deposit) < parseFloat(formData.propertyValue) * 0.05) {
+        newErrors.deposit = 'Deposit is typically at least 5% of property value';
       }
     }
     
     if (step === 2) {
-      if (!formData.interestRate || formData.interestRate <= 0 || formData.interestRate > 20) {
-        newErrors.interestRate = 'Please enter an interest rate between 0% and 20%';
+      // Validate interest rate
+      if (!formData.interestRate || formData.interestRate.trim() === '') {
+        newErrors.interestRate = 'Interest rate is required';
+      } else if (isNaN(formData.interestRate) || parseFloat(formData.interestRate) <= 0) {
+        newErrors.interestRate = 'Interest rate must be a positive number';
+      } else if (parseFloat(formData.interestRate) > 20) {
+        newErrors.interestRate = 'Interest rate cannot exceed 20%';
+      } else if (parseFloat(formData.interestRate) < 0.1) {
+        newErrors.interestRate = 'Interest rate must be at least 0.1%';
       }
-      if (!formData.loanTerm || formData.loanTerm <= 0) {
-        newErrors.loanTerm = 'Please enter a valid loan term';
+      
+      // Validate loan term
+      if (!formData.loanTerm || formData.loanTerm.trim() === '') {
+        newErrors.loanTerm = 'Loan term is required';
+      } else if (isNaN(formData.loanTerm) || parseFloat(formData.loanTerm) <= 0) {
+        newErrors.loanTerm = 'Loan term must be a positive number';
+      } else if (parseFloat(formData.loanTerm) < 1) {
+        newErrors.loanTerm = 'Loan term must be at least 1 year';
+      } else if (parseFloat(formData.loanTerm) > 50) {
+        newErrors.loanTerm = 'Loan term cannot exceed 50 years';
       }
     }
 
@@ -67,14 +224,13 @@ const MortgageCalculator = () => {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
+    // Validate field on blur (when user leaves the field)
+    // We'll trigger validation on blur, not on every keystroke
+  };
+
+  // Handle field blur for inline validation
+  const handleFieldBlur = (name, value) => {
+    validateField(name, value);
   };
 
   const handleNext = () => {
@@ -143,6 +299,8 @@ const MortgageCalculator = () => {
     setCurrentStep(1);
     setErrors({});
     localStorage.removeItem('mortgageCalculatorData');
+    localStorage.removeItem('mortgageCalculatorStep');
+    localStorage.removeItem('mortgageCalculatorTimestamp');
   };
 
   const steps = [
@@ -152,18 +310,54 @@ const MortgageCalculator = () => {
     { number: 4, label: 'Results' }
   ];
 
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Escape key to close tooltips/help sections
+      if (e.key === 'Escape') {
+        // Focus management can be added here if needed
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="calculator-container">
-      <div className="calculator-header">
-        <h1>Mortgage Calculator</h1>
-        <p>Calculate your monthly mortgage payments in just a few simple steps</p>
-      </div>
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      
+      {/* Resume Prompt */}
+      {showResumePrompt && (
+        <div className="resume-prompt" role="alertdialog" aria-labelledby="resume-title" aria-describedby="resume-description">
+          <h3 id="resume-title">Resume Your Calculation?</h3>
+          <p id="resume-description">
+            We found a previous calculation in progress. Would you like to resume where you left off?
+          </p>
+          <div className="resume-actions">
+            <button className="btn btn-primary" onClick={handleResume}>
+              Resume
+            </button>
+            <button className="btn btn-secondary" onClick={handleStartFresh}>
+              Start Fresh
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <main id="main-content" role="main">
+        <div className="calculator-header">
+          <h1>Mortgage Calculator</h1>
+          <p>Calculate your monthly mortgage payments in just a few simple steps</p>
+        </div>
 
       {/* Progress Indicator */}
-      <div className="progress-container">
-        <div className="progress-bar">
+      <nav className="progress-container" aria-label="Progress">
+        <div className="progress-bar" role="list">
           {steps.map((step) => (
-            <div key={step.number} className="progress-step">
+            <div key={step.number} className="progress-step" role="listitem">
               <div
                 className={`step-circle ${
                   currentStep > step.number
@@ -172,18 +366,25 @@ const MortgageCalculator = () => {
                     ? 'active'
                     : ''
                 }`}
+                aria-current={currentStep === step.number ? 'step' : undefined}
+                aria-label={`Step ${step.number}: ${step.label}${currentStep > step.number ? ' - completed' : currentStep === step.number ? ' - current' : ''}`}
               >
-                {currentStep > step.number ? '✓' : step.number}
+                {currentStep > step.number ? <span aria-hidden="true">✓</span> : <span aria-hidden="true">{step.number}</span>}
               </div>
               <div className="step-label">{step.label}</div>
             </div>
           ))}
         </div>
-      </div>
+      </nav>
 
       {/* Step 1: Property Details */}
-      <div className={`form-step ${currentStep === 1 ? 'active' : ''}`}>
-        <h2 className="step-title">Property Details</h2>
+      <div 
+        className={`form-step ${currentStep === 1 ? 'active' : ''}`}
+        role="region"
+        aria-labelledby="step1-title"
+        aria-hidden={currentStep !== 1}
+      >
+        <h2 className="step-title" id="step1-title">Property Details</h2>
         <p className="step-description">
           Enter the property value and your deposit amount to get started.
         </p>
@@ -200,6 +401,7 @@ const MortgageCalculator = () => {
           type="number"
           value={formData.propertyValue}
           onChange={handleInputChange}
+          onBlur={handleFieldBlur}
           placeholder="e.g., 250000"
           required
           error={errors.propertyValue}
@@ -213,6 +415,7 @@ const MortgageCalculator = () => {
           type="number"
           value={formData.deposit}
           onChange={handleInputChange}
+          onBlur={handleFieldBlur}
           placeholder="e.g., 50000"
           required
           error={errors.deposit}
@@ -222,8 +425,13 @@ const MortgageCalculator = () => {
       </div>
 
       {/* Step 2: Loan Details */}
-      <div className={`form-step ${currentStep === 2 ? 'active' : ''}`}>
-        <h2 className="step-title">Loan Details</h2>
+      <div 
+        className={`form-step ${currentStep === 2 ? 'active' : ''}`}
+        role="region"
+        aria-labelledby="step2-title"
+        aria-hidden={currentStep !== 2}
+      >
+        <h2 className="step-title" id="step2-title">Loan Details</h2>
         <p className="step-description">
           Enter the interest rate and loan term for your mortgage.
         </p>
@@ -240,6 +448,7 @@ const MortgageCalculator = () => {
           type="number"
           value={formData.interestRate}
           onChange={handleInputChange}
+          onBlur={handleFieldBlur}
           placeholder="e.g., 4.5"
           required
           error={errors.interestRate}
@@ -256,6 +465,7 @@ const MortgageCalculator = () => {
           type="number"
           value={formData.loanTerm}
           onChange={handleInputChange}
+          onBlur={handleFieldBlur}
           placeholder="e.g., 25"
           required
           error={errors.loanTerm}
@@ -267,8 +477,13 @@ const MortgageCalculator = () => {
       </div>
 
       {/* Step 3: Mortgage Type */}
-      <div className={`form-step ${currentStep === 3 ? 'active' : ''}`}>
-        <h2 className="step-title">Mortgage Type</h2>
+      <div 
+        className={`form-step ${currentStep === 3 ? 'active' : ''}`}
+        role="region"
+        aria-labelledby="step3-title"
+        aria-hidden={currentStep !== 3}
+      >
+        <h2 className="step-title" id="step3-title">Mortgage Type</h2>
         <p className="step-description">
           Choose the type of mortgage that suits your needs.
         </p>
@@ -296,15 +511,24 @@ const MortgageCalculator = () => {
             value={formData.mortgageType}
             onChange={(e) => handleInputChange('mortgageType', e.target.value)}
             className={errors.mortgageType ? 'error' : ''}
+            aria-describedby={errors.mortgageType ? 'mortgageType-error' : 'mortgageType-hint'}
+            aria-invalid={errors.mortgageType ? 'true' : 'false'}
+            aria-required="true"
           >
             <option value="repayment">Repayment Mortgage</option>
             <option value="interest-only">Interest-Only Mortgage</option>
           </select>
-          <p className="input-hint">
+          <p className="input-hint" id="mortgageType-hint">
             {formData.mortgageType === 'repayment' 
               ? "You'll pay back the loan amount plus interest over the term."
               : "You'll pay only interest each month. The loan amount stays the same."}
           </p>
+          {errors.mortgageType && (
+            <div id="mortgageType-error" className="error-message" role="alert">
+              <span className="error-icon">⚠</span>
+              {errors.mortgageType}
+            </div>
+          )}
         </div>
       </div>
 
@@ -325,17 +549,20 @@ const MortgageCalculator = () => {
             className="btn btn-secondary"
             onClick={handleBack}
             disabled={currentStep === 1}
+            aria-label={currentStep === 1 ? 'Cannot go back, this is the first step' : 'Go back to previous step'}
           >
             Back
           </button>
           <button
             className="btn btn-primary"
             onClick={handleNext}
+            aria-label={currentStep === 3 ? 'Calculate mortgage payment' : 'Go to next step'}
           >
             {currentStep === 3 ? 'Calculate' : 'Next'}
           </button>
         </div>
       )}
+      </main>
     </div>
   );
 };

@@ -224,6 +224,8 @@ body {
 .tooltip-icon {
   width: 20px;
   height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   border-radius: 50%;
   background-color: #0066cc;
   color: white;
@@ -233,6 +235,22 @@ body {
   font-size: 12px;
   cursor: help;
   font-weight: bold;
+  border: none;
+  padding: 0;
+  margin-left: 6px;
+  transition: all 0.2s ease;
+}
+
+.tooltip-icon:hover,
+.tooltip-icon:focus {
+  background-color: #0052a3;
+  outline: 2px solid #0052a3;
+  outline-offset: 2px;
+}
+
+.tooltip-icon:focus-visible {
+  outline: 3px solid #0052a3;
+  outline-offset: 2px;
 }
 
 .tooltip-content {
@@ -245,14 +263,25 @@ body {
   padding: 10px 15px;
   border-radius: 6px;
   font-size: 13px;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+  white-space: normal;
+  opacity: 1;
+  visibility: visible;
   z-index: 1000;
   min-width: 200px;
-  white-space: normal;
+  max-width: 300px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: fadeInTooltip 0.2s ease-in;
+}
+
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .tooltip-content::after {
@@ -265,7 +294,8 @@ body {
   border-top-color: #333;
 }
 
-.tooltip-container:hover .tooltip-content {
+/* Ensure tooltip is visible when shown (for keyboard users) */
+.tooltip-container .tooltip-content {
   opacity: 1;
   visibility: visible;
 }
@@ -414,35 +444,125 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .App {
+    padding: 10px;
+  }
+
   .calculator-container {
-    padding: 20px;
-    margin: 10px;
+    padding: 15px;
+    margin: 5px;
+    border-radius: 8px;
+  }
+
+  .calculator-header h1 {
+    font-size: 24px;
+  }
+
+  .calculator-header p {
+    font-size: 14px;
   }
 
   .progress-bar {
-    flex-direction: column;
-    gap: 15px;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    gap: 5px;
   }
 
-  .progress-step::before {
-    display: none;
+  .progress-step {
+    min-width: 80px;
+  }
+
+  .step-label {
+    font-size: 11px;
+  }
+
+  .step-circle {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .step-title {
+    font-size: 20px;
+  }
+
+  .step-description {
+    font-size: 13px;
+  }
+
+  .help-section {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .help-section h3 {
+    font-size: 14px;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px 15px; /* Larger touch target (min 44px) */
+    min-height: 44px; /* WCAG touch target size */
   }
 
   .results-breakdown {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .button-group {
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
   .btn {
     width: 100%;
+    min-height: 44px; /* WCAG touch target size */
+    padding: 14px 30px;
   }
 
   .monthly-payment {
     font-size: 28px;
+  }
+
+  .tooltip-content {
+    min-width: 250px;
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  /* Ensure inputs are not covered by keyboard */
+  .form-step.active {
+    scroll-margin-top: 20px;
+  }
+}
+
+/* Tablet specific styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .calculator-container {
+    padding: 25px;
+    max-width: 700px;
+  }
+
+  .results-breakdown {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .calculator-container {
+    padding: 15px;
+  }
+
+  .progress-bar {
+    gap: 10px;
+  }
+
+  .step-label {
+    font-size: 10px;
   }
 }
 
@@ -459,8 +579,113 @@ body {
   border-width: 0;
 }
 
-/* Focus styles for keyboard navigation */
+/* Focus styles for keyboard navigation - WCAG 2.1 AA compliant */
 *:focus-visible {
-  outline: 2px solid #0066cc;
+  outline: 3px solid #0066cc;
   outline-offset: 2px;
+  border-radius: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #0066cc;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .calculator-container {
+    border: 2px solid #000;
+  }
+  
+  .btn-primary {
+    border: 2px solid #fff;
+  }
+  
+  .step-circle.active {
+    border: 3px solid #fff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Ensure color contrast meets WCAG AA standards */
+.calculator-header h1 {
+  color: #0052a3; /* Darker for better contrast */
+}
+
+.btn-primary {
+  background-color: #0052a3; /* Darker for better contrast */
+}
+
+.btn-primary:hover {
+  background-color: #003d7a;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #0066cc;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 4px;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Resume Prompt */
+.resume-prompt {
+  background-color: #e7f3ff;
+  border-left: 4px solid #0066cc;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 25px;
+}
+
+.resume-prompt h3 {
+  color: #0066cc;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.resume-prompt p {
+  color: #333;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+.resume-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.resume-actions .btn {
+  min-width: 120px;
+}
+
+@media (max-width: 768px) {
+  .resume-actions {
+    flex-direction: column;
+  }
+  
+  .resume-actions .btn {
+    width: 100%;
+  }
 }
