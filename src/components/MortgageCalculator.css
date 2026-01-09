@@ -1,0 +1,31 @@
+/* Additional styles specific to MortgageCalculator component */
+/* Most styles are in App.css, but component-specific overrides can go here */
+
+.calculator-container {
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Improve mobile keyboard handling */
+@media (max-width: 768px) {
+  .form-group input,
+  .form-group select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px 15px; /* Larger touch target */
+  }
+
+  .calculator-container {
+    padding: 15px;
+  }
+}
+

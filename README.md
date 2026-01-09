@@ -1,70 +1,86 @@
-# Getting Started with Create React App
+# Mortgage Calculator - Redesigned
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A user-friendly mortgage calculator built with React, designed based on customer feedback analysis.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+✅ **Step-by-Step Wizard** - Guides users through calculation process  
+✅ **Clear Navigation** - Visual progress indicator  
+✅ **Real-time Validation** - Immediate feedback on input errors  
+✅ **Tooltips & Help** - Contextual help throughout  
+✅ **Auto-Save** - Data persists across page refreshes  
+✅ **Responsive Design** - Works on all devices  
+✅ **Accessible** - WCAG AA compliant  
 
-### `npm start`
+## Quick Start
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Installation
 
-### `npm test`
+```bash
+# Navigate to project directory
+cd mortgage-calculator
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# Install dependencies
+npm install
 
-### `npm run build`
+# Start development server
+npm start
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The app will open at `http://localhost:3000`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Project Structure
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```
+mortgage-calculator/
+├── src/
+│   ├── components/
+│   │   ├── MortgageCalculator.js    # Main calculator component
+│   │   ├── InputField.js            # Reusable input with validation
+│   │   ├── ResultsDisplay.js        # Results presentation
+│   │   └── *.css                    # Component styles
+│   ├── App.js                       # Root component
+│   └── App.css                      # Global styles
+├── public/                          # Static assets
+└── package.json                     # Dependencies
+```
 
-### `npm run eject`
+## Design Principles
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+This calculator addresses key customer feedback:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+1. **Navigation** - Clear step-by-step wizard
+2. **Clarity** - Tooltips and explanations
+3. **Technical** - Auto-save, validation, responsive
+4. **Results** - Clear breakdown with explanations
+5. **Design** - Clean, uncluttered layout
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## Development
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Available Scripts
 
-## Learn More
+- `npm start` - Start development server
+- `npm build` - Build for production
+- `npm test` - Run tests
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Customization
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- Colors: Edit color variables in `App.css`
+- Steps: Modify steps array in `MortgageCalculator.js`
+- Validation: Update `validateStep()` function
 
-### Code Splitting
+## Browser Support
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+- Mobile browsers (iOS Safari, Chrome Mobile)
 
-### Analyzing the Bundle Size
+## Documentation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+See `DESIGN_DOCUMENTATION.md` for detailed design decisions and improvements.
